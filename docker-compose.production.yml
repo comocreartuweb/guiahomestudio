@@ -1,0 +1,44 @@
+name: guiahomestudio_production
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  nginx:
+    image: nginx:1.30-alpine@sha256:985220252f3863977e468f611ef118ebd01421289dd86ee1ae99cb068c3bce2b
+    container_name: guiahomestudio_production_nginx
+    restart: unless-stopped
+    user: "101:101"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+    tmpfs:
+      - /var/cache/nginx:rw,nosuid,nodev,noexec,uid=101,gid=101,mode=0755
+      - /run:rw,nosuid,nodev,noexec,uid=101,gid=101,mode=0755
+      - /tmp:rw,nosuid,nodev,noexec,uid=101,gid=101,mode=1777
+    sysctls:
+      - net.ipv4.ip_unprivileged_port_start=0
+    networks:
+      - front
+    logging: *default-logging
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 64m
+    pids_limit: 50
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/nginx-health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  front:
+    external: true
+    name: guiahomestudio_production_front
